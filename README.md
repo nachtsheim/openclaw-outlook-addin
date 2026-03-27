@@ -225,6 +225,10 @@ The add-in uses OpenClaw's native Gateway RPC protocol:
 
 **This add-in is a tool — compliance with data protection regulations is the responsibility of the deploying organization.**
 
+## Trademarks
+
+The OpenClaw name and lobster logo are trademarks of their respective owners. This project is an independent community integration and is not officially endorsed by or affiliated with the OpenClaw project. The logo is used under the MIT license terms of the OpenClaw distribution.
+
 ## License
 
 MIT
