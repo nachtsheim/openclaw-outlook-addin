@@ -400,15 +400,29 @@ function handleEvent(evt) {
     }
 
     case "agent.tool_call":
-    case "agent.tool_result":
-      // Show tool activity indicator
+    case "tool_call":
       if (payload.name || payload.toolName) {
         updateTypingText(`Using ${payload.name || payload.toolName}...`);
+      } else {
+        showTyping();
       }
+      break;
+
+    case "agent.tool_result":
+    case "tool_result":
+      updateTypingText("Processing...");
       break;
 
     case "session.update":
       // Session metadata update, ignore
+      break;
+
+    case "run":
+    case "agent":
+      // Generic run/agent events — keep typing if active
+      if (payload.phase === "start" || payload.state === "start") {
+        showTyping();
+      }
       break;
 
     default:
@@ -573,6 +587,8 @@ function sendChatMessage(message) {
     idempotencyKey: crypto.randomUUID()
   }).then((result) => {
     console.log("[openclaw] chat.send result:", JSON.stringify(result || {}).substring(0, 300));
+    // Keep typing indicator until we get the response
+    showTyping();
   }).catch((err) => {
     hideTyping();
     addMessage("error", "Failed to send: " + err.message);
