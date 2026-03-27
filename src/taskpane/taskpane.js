@@ -221,7 +221,7 @@ function sendConnect() {
     minProtocol: 3,
     maxProtocol: 3,
     client: {
-      id: "webchat",
+      id: "openclaw-control-ui",
       version: "1.0.0",
       platform: navigator.platform || "web",
       mode: "webchat",
@@ -391,7 +391,8 @@ function sendChatMessage(message) {
   rpcRequest("chat.send", {
     sessionKey: sessionKey,
     message: fullMessage,
-    deliver: false
+    deliver: false,
+    idempotencyKey: crypto.randomUUID()
   }).catch((err) => {
     hideTyping();
     addMessage("error", "Failed to send: " + err.message);
