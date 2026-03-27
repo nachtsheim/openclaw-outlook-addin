@@ -1,6 +1,6 @@
 {
   "name": "openclaw-outlook-addin",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "OpenClaw AI Assistant - Outlook Web Add-in sidebar for email analysis and reply drafting",
   "main": "src/taskpane/taskpane.js",
   "scripts": {
