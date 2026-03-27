@@ -4,6 +4,10 @@ Bring the full power of your OpenClaw agent into Outlook — with all your tools
 
 ![Status](https://img.shields.io/badge/status-beta-yellow) ![Platform](https://img.shields.io/badge/platform-Outlook%20Desktop%20%7C%20OWA-blue)
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="OpenClaw Outlook Add-in sidebar" width="360"/>
+</p>
+
 ## Features
 
 - 📧 **Email Context** — Automatically reads subject, sender, recipients, date, and body of the selected email
