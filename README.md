@@ -201,6 +201,24 @@ The add-in uses OpenClaw's native Gateway RPC protocol:
 - `displayReplyForm()` opens Outlook's native compose — user always reviews before sending
 - WebSocket connection is local only (`localhost:3000` → `localhost:18789`)
 
+## Privacy & Data Protection (GDPR / DSGVO)
+
+⚠️ **Important:** This add-in sends email content (subject, sender, recipients, body text) to an AI model via your local OpenClaw Gateway. Before using it in a professional context, ensure the following:
+
+- **Data processing agreement (DPA/AVV):** If you process personal data from emails, ensure your AI provider has an appropriate data processing agreement in place.
+- **Zero data retention (ZDR):** Use an AI provider plan that does **not** retain or train on your data (e.g., Anthropic API, OpenAI API with ZDR, Google Gemini API — **not** free-tier consumer products).
+- **Local processing:** All data flows through your **local** OpenClaw Gateway (`localhost`). No data is sent to third-party servers other than the configured AI model provider.
+- **No cloud storage:** The add-in does not store emails, conversations, or tokens on any external server. The Gateway token is stored in browser localStorage on your machine only.
+- **Employee consent:** If processing employee or customer emails, ensure appropriate legal basis under GDPR Art. 6 (e.g., legitimate interest, consent, or contractual necessity).
+- **Data minimization:** The add-in sends only the currently selected email's content — not your entire mailbox.
+
+**Recommendation:** For business use, pair this add-in with an enterprise AI plan that provides contractual guarantees for data privacy, such as:
+- Anthropic Claude (API / Max for Business) — zero retention by default
+- OpenAI API (with Zero Data Retention) — opt-in via API settings
+- Self-hosted models (Ollama, vLLM) — data never leaves your infrastructure
+
+**This add-in is a tool — compliance with data protection regulations is the responsibility of the deploying organization.**
+
 ## License
 
 MIT
