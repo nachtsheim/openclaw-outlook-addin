@@ -77,6 +77,15 @@ module.exports = (env, argv) => {
         type: "https",
         options: isDev ? getHttpsOptions() : undefined,
       },
+      proxy: [
+        {
+          context: ["/gateway-ws"],
+          target: "ws://127.0.0.1:18789",
+          ws: true,
+          changeOrigin: true,
+          pathRewrite: { "^/gateway-ws": "" },
+        },
+      ],
       port: 3000,
       hot: true,
     },

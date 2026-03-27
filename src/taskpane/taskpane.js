@@ -115,7 +115,12 @@ function showEmailInfo(subject, from, date) {
 
 // ===== WebSocket (OpenClaw Gateway Protocol) =====
 function getWsUrl() {
-  // Use ws:// for localhost (same machine)
+  // Use the webpack dev-server proxy to avoid mixed-content (https → ws) blocking
+  // The proxy at wss://localhost:3000/gateway-ws forwards to ws://127.0.0.1:18789
+  const loc = window.location;
+  if (loc.protocol === "https:") {
+    return `wss://${loc.host}/gateway-ws`;
+  }
   return `ws://127.0.0.1:${GATEWAY_PORT}`;
 }
 
