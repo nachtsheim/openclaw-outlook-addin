@@ -89,41 +89,60 @@ function readGatewayToken() {
 }
 
 function showTokenSetup() {
+  showSettings(true);
+}
+
+function showSettings(tokenRequired) {
   const container = $("chat-messages");
   const div = document.createElement("div");
   div.className = "message system-message";
-  div.innerHTML = `<div class="message-content">
-    <strong>Gateway Token Required</strong><br>
-    Enter your OpenClaw Gateway token to connect:<br><br>
-    <input type="password" id="token-input" placeholder="Paste gateway token..." 
-      style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;margin-bottom:6px;font-family:var(--font-mono)"/>
-    <button id="token-save-btn" 
+  div.id = "settings-panel";
+
+  const storedPrompt = getSystemPrompt();
+
+  div.innerHTML = `<div class="message-content" style="text-align:left">
+    <strong>⚙️ Settings</strong><br><br>
+    <label style="font-size:11px;color:var(--text-secondary)">Gateway Token ${tokenRequired ? "(required)" : ""}</label>
+    <input type="password" id="token-input" placeholder="Paste gateway token..." value="${gatewayToken || ""}"
+      style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;margin-bottom:8px;font-family:var(--font-mono)"/>
+    <label style="font-size:11px;color:var(--text-secondary)">System Prompt (instructions for all responses)</label>
+    <textarea id="prompt-input" rows="4" placeholder="E.g.: Write emails without icons or bold text. Keep it short..."
+      style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;margin-bottom:8px;font-family:var(--font);resize:vertical">${storedPrompt}</textarea>
+    <button id="settings-save-btn" 
       style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">
-      Save & Connect
+      Save${tokenRequired ? " & Connect" : ""}
     </button>
-    <br><small style="color:var(--text-muted)">Find it in ~/.openclaw/openclaw.json → gateway.auth.token</small>
+    ${tokenRequired ? '<br><small style="color:var(--text-muted)">Token: ~/.openclaw/openclaw.json → gateway.auth.token</small>' : ''}
   </div>`;
   container.appendChild(div);
 
   setTimeout(() => {
-    const btn = document.getElementById("token-save-btn");
-    const input = document.getElementById("token-input");
-    if (btn && input) {
+    const btn = document.getElementById("settings-save-btn");
+    if (btn) {
       btn.addEventListener("click", () => {
-        const token = input.value.trim();
-        if (token) {
-          try { localStorage.setItem("openclaw-gateway-token", token); } catch(e) {}
-          gatewayToken = token;
-          div.remove();
-          addMessage("system", "Token saved. Connecting...");
-          connectWebSocket();
+        const tokenVal = document.getElementById("token-input").value.trim();
+        const promptVal = document.getElementById("prompt-input").value.trim();
+        
+        if (tokenVal) {
+          try { localStorage.setItem("openclaw-gateway-token", tokenVal); } catch(e) {}
+          gatewayToken = tokenVal;
         }
-      });
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") btn.click();
+        try { localStorage.setItem("openclaw-system-prompt", promptVal); } catch(e) {}
+        
+        div.remove();
+        if (tokenRequired && tokenVal) {
+          addMessage("system", "Settings saved. Connecting...");
+          connectWebSocket();
+        } else {
+          addMessage("system", "Settings saved.");
+        }
       });
     }
   }, 100);
+}
+
+function getSystemPrompt() {
+  try { return localStorage.getItem("openclaw-system-prompt") || ""; } catch(e) { return ""; }
 }
 
 // ===== Email Context =====
@@ -533,10 +552,17 @@ function sendChatMessage(message) {
   // Build the message with email context
   let fullMessage = message;
   const currentEmailId = emailContext?.subject || null;
+  const systemPrompt = getSystemPrompt();
+
   if (emailContext && contextSentForEmail !== currentEmailId) {
-    // First message for this email — include full context
+    // First message for this email — include context + system prompt
     const body = (emailContext.body || "").substring(0, 3000);
-    fullMessage = `[Current email context]\nSubject: ${emailContext.subject || ""}\nFrom: ${emailContext.from || ""}\nTo: ${emailContext.to || ""}\nDate: ${emailContext.date || ""}\n\nBody:\n${body}\n\n---\n\nUser question: ${message}`;
+    let prefix = "";
+    if (systemPrompt) {
+      prefix += `[System instructions]\n${systemPrompt}\n\n`;
+    }
+    prefix += `[Current email context]\nSubject: ${emailContext.subject || ""}\nFrom: ${emailContext.from || ""}\nTo: ${emailContext.to || ""}\nDate: ${emailContext.date || ""}\n\nBody:\n${body}\n\n---\n\n`;
+    fullMessage = prefix + `User question: ${message}`;
     contextSentForEmail = currentEmailId;
   }
 
@@ -669,6 +695,11 @@ function bindUIEvents() {
   $("send-btn").addEventListener("click", handleSend);
   $("draft-btn").addEventListener("click", handleDraftReply);
   $("send-reply-btn").addEventListener("click", handleSendReply);
+  $("settings-btn").addEventListener("click", () => {
+    const existing = document.getElementById("settings-panel");
+    if (existing) { existing.remove(); return; } // toggle
+    showSettings(false);
+  });
 
   const input = $("message-input");
   input.addEventListener("keydown", (e) => {
