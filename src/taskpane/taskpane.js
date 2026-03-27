@@ -10,7 +10,7 @@ let ws = null;
 let reconnectAttempts = 0;
 let reconnectTimer = null;
 let connected = false;
-let sessionKey = "agent:main:main";
+let sessionKey = "agent:main:outlook-addin";
 let lastDraftContent = null;
 let emailContext = null;
 let rpcId = 0;
@@ -18,6 +18,7 @@ let pendingRpc = new Map();
 let currentStream = "";
 let currentRunId = null;
 let gatewayToken = null;
+let waitingForResponse = false;
 
 // ===== DOM References =====
 const $ = (id) => document.getElementById(id);
@@ -243,10 +244,11 @@ function sendConnect() {
       reconnectAttempts = 0;
       setConnectionStatus("connected");
       
-      // Get session key from connect response if available
+      // Get session key from connect response
       if (result && result.sessionKey) {
         sessionKey = result.sessionKey;
       }
+      console.log("[openclaw] connected, session:", sessionKey);
     })
     .catch((err) => {
       console.error("Connect failed:", err);
@@ -277,7 +279,8 @@ function handleMessage(raw) {
     if (data.ok === false) {
       reject(new Error(data.error?.message || data.error?.code || "RPC error"));
     } else {
-      resolve(data.result);
+      // Gateway returns result in either data.result or data.payload
+      resolve(data.result || data.payload || data);
     }
     return;
   }
@@ -292,6 +295,8 @@ function handleMessage(raw) {
 function handleEvent(evt) {
   const event = evt.event || "";
   const payload = evt.payload || evt.data || {};
+  // Debug: log all events
+  console.log("[openclaw] event:", event, JSON.stringify(payload).substring(0, 200));
 
   switch (event) {
     case "connect.challenge":
@@ -307,10 +312,29 @@ function handleEvent(evt) {
       } else if (phase === "end" || phase === "error") {
         currentRunId = null;
         hideTyping();
-        // If we have accumulated stream content, finalize it
         if (currentStream.trim()) {
           addMessage("ai", currentStream.trim());
           currentStream = "";
+        }
+      }
+      break;
+    }
+
+    case "chat": {
+      const state = payload.state || "";
+      if (state === "start" || state === "started") {
+        currentRunId = payload.runId || null;
+        currentStream = "";
+        showTyping();
+      } else if (state === "final" || state === "end" || state === "error") {
+        currentRunId = null;
+        hideTyping();
+        if (currentStream.trim()) {
+          addMessage("ai", currentStream.trim());
+          currentStream = "";
+        } else if (waitingForResponse) {
+          waitingForResponse = false;
+          fetchLastAssistantMessage();
         }
       }
       break;
@@ -362,6 +386,57 @@ function handleEvent(evt) {
   }
 }
 
+function fetchLastAssistantMessage() {
+  rpcRequest("chat.history", { sessionKey: sessionKey, limit: 10 })
+    .then((result) => {
+      if (!result) { addMessage("error", "Empty history response"); return; }
+      
+      // Handle various response formats
+      let messages = [];
+      if (Array.isArray(result.messages)) messages = result.messages;
+      else if (Array.isArray(result)) messages = result;
+      else if (result.history && Array.isArray(result.history)) messages = result.history;
+      else {
+        // Try to find messages anywhere in the result
+        for (const key of Object.keys(result)) {
+          if (Array.isArray(result[key])) { messages = result[key]; break; }
+        }
+      }
+
+      if (messages.length === 0) {
+        // History might not be ready yet, retry after 2s
+        setTimeout(() => fetchLastAssistantMessage(), 2000);
+        return;
+      }
+
+      // Find the last assistant message
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        if (msg.role === "assistant") {
+          let text = "";
+          if (typeof msg.content === "string") {
+            text = msg.content;
+          } else if (Array.isArray(msg.content)) {
+            text = msg.content
+              .filter(c => c.type === "text")
+              .map(c => c.text || "")
+              .join("\n");
+          }
+          if (text.trim()) {
+            addMessage("ai", text.trim());
+          } else {
+            addMessage("error", "Assistant message empty. Content type: " + typeof msg.content);
+          }
+          return;
+        }
+      }
+      addMessage("error", "No assistant message found. Last role: " + (messages[messages.length-1]?.role || "unknown"));
+    })
+    .catch((err) => {
+      addMessage("error", "Failed to fetch response: " + err.message);
+    });
+}
+
 function setConnectionStatus(status) {
   const bar = $("connection-bar");
   const text = $("connection-text");
@@ -385,7 +460,8 @@ function sendChatMessage(message) {
   // Build the message with email context
   let fullMessage = message;
   if (emailContext && !message.startsWith("[Email context already provided]")) {
-    fullMessage = `[Current email context]\nSubject: ${emailContext.subject}\nFrom: ${emailContext.from}\nTo: ${emailContext.to}\nDate: ${emailContext.date}\n\nBody:\n${emailContext.body?.substring(0, 3000)}\n\n---\n\nUser question: ${message}`;
+    const body = (emailContext.body || "").substring(0, 3000);
+    fullMessage = `[Current email context]\nSubject: ${emailContext.subject || ""}\nFrom: ${emailContext.from || ""}\nTo: ${emailContext.to || ""}\nDate: ${emailContext.date || ""}\n\nBody:\n${body}\n\n---\n\nUser question: ${message}`;
   }
 
   rpcRequest("chat.send", {
@@ -393,6 +469,8 @@ function sendChatMessage(message) {
     message: fullMessage,
     deliver: false,
     idempotencyKey: crypto.randomUUID()
+  }).then((result) => {
+    console.log("[openclaw] chat.send result:", JSON.stringify(result || {}).substring(0, 300));
   }).catch((err) => {
     hideTyping();
     addMessage("error", "Failed to send: " + err.message);
@@ -470,6 +548,7 @@ function handleSend() {
   input.value = "";
   autoResizeInput(input);
   showTyping();
+  waitingForResponse = true;
   sendChatMessage(text);
 }
 
