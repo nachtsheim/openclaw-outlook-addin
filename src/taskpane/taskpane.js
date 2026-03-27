@@ -261,7 +261,7 @@ function sendConnect() {
     maxProtocol: 3,
     client: {
       id: "openclaw-control-ui",
-      version: "1.0.0",
+      version: "0.2.0",
       platform: navigator.platform || "web",
       mode: "webchat",
       instanceId: "outlook-" + Date.now()
