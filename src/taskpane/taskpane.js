@@ -330,6 +330,15 @@ function handleMessage(raw) {
   }
 }
 
+// Flush any accumulated streaming text into a chat bubble
+function flushStream() {
+  const text = currentStream.trim();
+  if (text) {
+    addMessage("ai", text);
+  }
+  currentStream = "";
+}
+
 function handleEvent(evt) {
   const event = evt.event || "";
   const payload = evt.payload || evt.data || {};
@@ -341,38 +350,44 @@ function handleEvent(evt) {
       sendConnect();
       break;
 
+    // agent.run wraps the entire agent turn — use for overall typing state only
     case "agent.run": {
       const phase = payload.phase || payload.data?.phase || "";
       if (phase === "start") {
         currentRunId = payload.runId || null;
-        currentStream = "";
         showTyping();
       } else if (phase === "end" || phase === "error") {
         currentRunId = null;
+        // Flush any remaining streamed text from the last segment
+        flushStream();
         hideTyping();
-        if (currentStream.trim()) {
-          addMessage("ai", currentStream.trim());
-          currentStream = "";
+        // If we never got deltas, fall back to history fetch
+        if (waitingForResponse) {
+          waitingForResponse = false;
+          fetchLastAssistantMessage();
         }
       }
       break;
     }
 
+    // chat start/end can fire multiple times per turn (text → tool → text)
     case "chat": {
       const state = payload.state || "";
       if (state === "start" || state === "started") {
-        currentRunId = payload.runId || null;
-        currentStream = "";
+        // If there's accumulated text from a previous segment, flush it first
+        flushStream();
         showTyping();
       } else if (state === "final" || state === "end" || state === "error") {
-        currentRunId = null;
-        hideTyping();
-        if (currentStream.trim()) {
-          addMessage("ai", currentStream.trim());
-          currentStream = "";
-        } else if (waitingForResponse) {
-          waitingForResponse = false;
-          fetchLastAssistantMessage();
+        // Flush this segment's text into a bubble
+        flushStream();
+        // Don't hideTyping here — agent.run may still be active (tool calls coming)
+        // Only hide if there's no active run
+        if (!currentRunId) {
+          hideTyping();
+          if (waitingForResponse) {
+            waitingForResponse = false;
+            fetchLastAssistantMessage();
+          }
         }
       }
       break;
@@ -390,17 +405,20 @@ function handleEvent(evt) {
 
     case "agent.message":
     case "chat.message": {
-      hideTyping();
+      // Complete message arrived at once (no streaming) — flush any partial stream first
+      flushStream();
       const content = payload.content || payload.text || payload.message || "";
       if (content) {
-        currentStream = "";
         addMessage("ai", typeof content === "string" ? content : JSON.stringify(content));
       }
+      if (!currentRunId) hideTyping();
       break;
     }
 
     case "agent.tool_call":
     case "tool_call":
+      // Tool call between text segments — flush accumulated text so far
+      flushStream();
       if (payload.name || payload.toolName) {
         updateTypingText(`Using ${payload.name || payload.toolName}...`);
       } else {
@@ -430,8 +448,9 @@ function handleEvent(evt) {
       if (payload.content || payload.text || payload.message) {
         const text = payload.content || payload.text || payload.message;
         if (typeof text === "string" && text.trim()) {
-          hideTyping();
+          flushStream();
           addMessage("ai", text.trim());
+          if (!currentRunId) hideTyping();
         }
       }
       break;
