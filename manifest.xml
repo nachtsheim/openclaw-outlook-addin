@@ -81,24 +81,7 @@
           </ExtensionPoint>
         </DesktopFormFactor>
 
-        <MobileFormFactor>
-          <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
-            <Group id="OpenClawMobileGroup">
-              <Label resid="GroupLabel"/>
-              <Control xsi:type="MobileButton" id="OpenClawMobileButton">
-                <Label resid="TaskpaneButton.Label"/>
-                <Icon>
-                  <bt:Image size="25" resid="Icon.25x25"/>
-                  <bt:Image size="32" resid="Icon.32x32"/>
-                  <bt:Image size="48" resid="Icon.48x48"/>
-                </Icon>
-                <Action xsi:type="ShowTaskpane">
-                  <SourceLocation resid="Taskpane.Url"/>
-                </Action>
-              </Control>
-            </Group>
-          </ExtensionPoint>
-        </MobileFormFactor>
+
       </Host>
     </Hosts>
 

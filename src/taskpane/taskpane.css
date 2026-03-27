@@ -5,7 +5,39 @@
   padding: 0;
 }
 
-:root {
+/* ===== Light Mode (default) ===== */
+:root, [data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #e8e8e8;
+  --bg-input: #ffffff;
+  --bg-hover: #e1e1e1;
+  --text-primary: #1a1a1a;
+  --text-secondary: #616161;
+  --text-muted: #999999;
+  --accent: #0078d4;
+  --accent-hover: #106ebe;
+  --accent-subtle: rgba(0, 120, 212, 0.08);
+  --success: #107c10;
+  --warning: #ca5010;
+  --danger: #d13438;
+  --border: #e0e0e0;
+  --border-subtle: #ebebeb;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Code", "Fira Code", Consolas, monospace;
+  --user-msg-bg: #0078d4;
+  --user-msg-color: #ffffff;
+  --ai-msg-bg: #f0f0f0;
+  --ai-msg-border: #e0e0e0;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-hover: #a1a1a1;
+}
+
+/* ===== Dark Mode ===== */
+[data-theme="dark"] {
   --bg-primary: #1e1e1e;
   --bg-secondary: #252526;
   --bg-tertiary: #2d2d30;
@@ -22,11 +54,42 @@
   --danger: #f14c4c;
   --border: #3e3e42;
   --border-subtle: #2d2d30;
-  --radius: 8px;
-  --radius-sm: 4px;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Cascadia Code", "Fira Code", Consolas, monospace;
+  --user-msg-bg: #0078d4;
+  --user-msg-color: #ffffff;
+  --ai-msg-bg: #2d2d30;
+  --ai-msg-border: #3e3e42;
+  --scrollbar-thumb: #3c3c3c;
+  --scrollbar-hover: #6a6a6a;
+}
+
+/* ===== System prefers-color-scheme fallback ===== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252526;
+    --bg-tertiary: #2d2d30;
+    --bg-input: #3c3c3c;
+    --bg-hover: #383838;
+    --text-primary: #cccccc;
+    --text-secondary: #969696;
+    --text-muted: #6a6a6a;
+    --accent: #0078d4;
+    --accent-hover: #1a8ae8;
+    --accent-subtle: rgba(0, 120, 212, 0.15);
+    --success: #4ec94e;
+    --warning: #e8a838;
+    --danger: #f14c4c;
+    --border: #3e3e42;
+    --border-subtle: #2d2d30;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --user-msg-bg: #0078d4;
+    --user-msg-color: #ffffff;
+    --ai-msg-bg: #2d2d30;
+    --ai-msg-border: #3e3e42;
+    --scrollbar-thumb: #3c3c3c;
+    --scrollbar-hover: #6a6a6a;
+  }
 }
 
 html, body {
@@ -148,12 +211,12 @@ html, body {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: var(--bg-input);
+  background: var(--scrollbar-thumb, var(--bg-input));
   border-radius: 3px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--scrollbar-hover, var(--text-muted));
 }
 
 /* ===== Messages ===== */
@@ -181,8 +244,8 @@ html, body {
 }
 
 .user-message .message-content {
-  background: var(--accent);
-  color: #ffffff;
+  background: var(--user-msg-bg);
+  color: var(--user-msg-color);
   border-bottom-right-radius: var(--radius-sm);
 }
 
@@ -191,9 +254,9 @@ html, body {
 }
 
 .ai-message .message-content {
-  background: var(--bg-tertiary);
+  background: var(--ai-msg-bg, var(--bg-tertiary));
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid var(--ai-msg-border, var(--border));
   border-bottom-left-radius: var(--radius-sm);
 }
 

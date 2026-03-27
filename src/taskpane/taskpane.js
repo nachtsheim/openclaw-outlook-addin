@@ -25,6 +25,7 @@ Office.onReady((info) => {
 });
 
 function initializeAddin() {
+  detectAndApplyTheme();
   bindUIEvents();
   connectWebSocket();
   readEmailContext();
@@ -40,6 +41,52 @@ function initializeAddin() {
         }
       }
     );
+  }
+}
+
+// ===== Theme Detection =====
+function detectAndApplyTheme() {
+  let isDark = false;
+
+  // Method 1: Office.js officeTheme (works in Outlook Desktop)
+  try {
+    const theme = Office.context.officeTheme;
+    if (theme && theme.bodyBackgroundColor) {
+      // Parse the background color to determine light/dark
+      const bg = theme.bodyBackgroundColor.replace("#", "");
+      const r = parseInt(bg.substring(0, 2), 16);
+      const g = parseInt(bg.substring(2, 4), 16);
+      const b = parseInt(bg.substring(4, 6), 16);
+      // Luminance formula
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      isDark = luminance < 0.5;
+    }
+  } catch (e) {
+    // officeTheme not available, fall through to other methods
+  }
+
+  // Method 2: prefers-color-scheme media query (fallback for OWA)
+  if (!isDark && window.matchMedia) {
+    isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    // Listen for changes
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+      document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+    });
+  }
+
+  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+
+  // Office theme change event (Outlook Desktop)
+  if (Office.context.officeTheme) {
+    try {
+      Office.context.document?.addHandlerAsync?.(
+        Office.EventType.OfficeThemeChanged,
+        () => detectAndApplyTheme()
+      );
+    } catch (e) {
+      // Not all hosts support this event
+    }
   }
 }
 
