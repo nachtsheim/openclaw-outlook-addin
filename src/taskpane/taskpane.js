@@ -19,6 +19,7 @@ let currentStream = "";
 let currentRunId = null;
 let gatewayToken = null;
 let waitingForResponse = false;
+let historyFetchPending = false;
 
 // ===== DOM References =====
 const $ = (id) => document.getElementById(id);
@@ -387,6 +388,8 @@ function handleEvent(evt) {
 }
 
 function fetchLastAssistantMessage() {
+  if (historyFetchPending) return;
+  historyFetchPending = true;
   rpcRequest("chat.history", { sessionKey: sessionKey, limit: 10 })
     .then((result) => {
       if (!result) { addMessage("error", "Empty history response"); return; }
@@ -404,7 +407,7 @@ function fetchLastAssistantMessage() {
       }
 
       if (messages.length === 0) {
-        // History might not be ready yet, retry after 2s
+        historyFetchPending = false;
         setTimeout(() => fetchLastAssistantMessage(), 2000);
         return;
       }
@@ -423,16 +426,18 @@ function fetchLastAssistantMessage() {
               .join("\n");
           }
           if (text.trim()) {
+            historyFetchPending = false;
             addMessage("ai", text.trim());
-          } else {
-            addMessage("error", "Assistant message empty. Content type: " + typeof msg.content);
           }
           return;
         }
       }
-      addMessage("error", "No assistant message found. Last role: " + (messages[messages.length-1]?.role || "unknown"));
+      // No assistant message yet, retry
+      historyFetchPending = false;
+      setTimeout(() => fetchLastAssistantMessage(), 2000);
     })
     .catch((err) => {
+      historyFetchPending = false;
       addMessage("error", "Failed to fetch response: " + err.message);
     });
 }
