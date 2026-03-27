@@ -228,7 +228,7 @@ function sendConnect() {
       instanceId: "outlook-" + Date.now()
     },
     role: "operator",
-    scopes: ["chat", "sessions"],
+    scopes: ["operator.admin"],
     caps: ["tool-events"],
     auth: {}
   };
