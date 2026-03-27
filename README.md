@@ -192,6 +192,7 @@ The add-in uses OpenClaw's native Gateway RPC protocol:
 | No button in Outlook ribbon | Restart Outlook, or wait for OWA→Desktop sync |
 | Icons not showing | Remove add-in in OWA, re-sideload `manifest.xml` |
 | Mixed content errors | The WSS proxy should handle this — check webpack proxy config |
+| Need to debug the sidebar | Open [https://localhost:3000/taskpane.html](https://localhost:3000/taskpane.html) directly in a browser tab |
 
 ## Security Notes
 
