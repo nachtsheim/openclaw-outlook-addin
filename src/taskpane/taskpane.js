@@ -33,8 +33,11 @@ function initializeAddin() {
   detectAndApplyTheme();
   bindUIEvents();
   readGatewayToken();
-  connectWebSocket();
   readEmailContext();
+  // Only connect if we have a token
+  if (gatewayToken) {
+    connectWebSocket();
+  }
 
   if (Office.context.mailbox.addHandlerAsync) {
     Office.context.mailbox.addHandlerAsync(
@@ -70,10 +73,52 @@ function detectAndApplyTheme() {
 
 // ===== Gateway Token =====
 function readGatewayToken() {
-  // Try to read from localStorage (persisted from settings)
   try {
-    gatewayToken = localStorage.getItem("openclaw-outlook-token");
+    gatewayToken = localStorage.getItem("openclaw-gateway-token") || null;
   } catch (e) {}
+
+  // If no token stored, show settings prompt
+  if (!gatewayToken) {
+    showTokenSetup();
+  }
+}
+
+function showTokenSetup() {
+  const container = $("chat-messages");
+  const div = document.createElement("div");
+  div.className = "message system-message";
+  div.innerHTML = `<div class="message-content">
+    <strong>Gateway Token Required</strong><br>
+    Enter your OpenClaw Gateway token to connect:<br><br>
+    <input type="password" id="token-input" placeholder="Paste gateway token..." 
+      style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;margin-bottom:6px;font-family:var(--font-mono)"/>
+    <button id="token-save-btn" 
+      style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">
+      Save & Connect
+    </button>
+    <br><small style="color:var(--text-muted)">Find it in ~/.openclaw/openclaw.json → gateway.auth.token</small>
+  </div>`;
+  container.appendChild(div);
+
+  setTimeout(() => {
+    const btn = document.getElementById("token-save-btn");
+    const input = document.getElementById("token-input");
+    if (btn && input) {
+      btn.addEventListener("click", () => {
+        const token = input.value.trim();
+        if (token) {
+          try { localStorage.setItem("openclaw-gateway-token", token); } catch(e) {}
+          gatewayToken = token;
+          div.remove();
+          addMessage("system", "Token saved. Connecting...");
+          connectWebSocket();
+        }
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") btn.click();
+      });
+    }
+  }, 100);
 }
 
 // ===== Email Context =====
@@ -138,6 +183,8 @@ function connectWebSocket() {
   }
 
   ws.onopen = () => {
+    // WS transport is open but Gateway handshake not done yet — stay on "connecting"
+    setConnectionStatus("connecting");
     // Wait for connect.challenge event from server, then send connect
     // If no challenge comes within 2s, send connect anyway
     setTimeout(() => {
@@ -174,19 +221,18 @@ function sendConnect() {
     minProtocol: 3,
     maxProtocol: 3,
     client: {
-      id: "outlook-addin",
+      id: "webchat",
       version: "1.0.0",
-      platform: "web",
+      platform: navigator.platform || "web",
       mode: "webchat",
       instanceId: "outlook-" + Date.now()
     },
-    role: "owner",
+    role: "operator",
     scopes: ["chat", "sessions"],
     caps: ["tool-events"],
     auth: {}
   };
 
-  // Add auth token if available
   if (gatewayToken) {
     params.auth = { token: gatewayToken };
   }
@@ -214,9 +260,9 @@ function rpcRequest(method, params) {
       reject(new Error("WebSocket not connected"));
       return;
     }
-    const id = ++rpcId;
+    const id = String(++rpcId);
     pendingRpc.set(id, { resolve, reject });
-    ws.send(JSON.stringify({ id, method, params }));
+    ws.send(JSON.stringify({ type: "req", id, method, params }));
   });
 }
 
@@ -224,12 +270,12 @@ function handleMessage(raw) {
   let data;
   try { data = JSON.parse(raw); } catch { return; }
 
-  // RPC Response (has id)
-  if (typeof data.id === "number" && pendingRpc.has(data.id)) {
-    const { resolve, reject } = pendingRpc.get(data.id);
-    pendingRpc.delete(data.id);
-    if (data.error) {
-      reject(new Error(data.error.message || data.error.code || "RPC error"));
+  // RPC Response (type: "res")
+  if (data.type === "res" && pendingRpc.has(String(data.id))) {
+    const { resolve, reject } = pendingRpc.get(String(data.id));
+    pendingRpc.delete(String(data.id));
+    if (data.ok === false) {
+      reject(new Error(data.error?.message || data.error?.code || "RPC error"));
     } else {
       resolve(data.result);
     }
