@@ -1,67 +1,70 @@
 ---
 name: outlook-addin
-description: Outlook sidebar add-in that connects to the local OpenClaw Gateway via WebSocket, giving full agent access from within Outlook. Use when setting up, configuring, or troubleshooting the OpenClaw Outlook Add-in. Triggers on Outlook add-in setup, Outlook sidebar, email context chat, Office.js sideloading, or Outlook Gateway integration.
+description: Outlook sidebar add-in that brings the full power of your OpenClaw agent into Microsoft Outlook. Chat with your agent about any email, use all your tools and skills, draft replies — directly from the inbox. Works with Outlook Desktop (Classic) and Outlook Web (OWA). Use when a user wants to integrate OpenClaw with Outlook, chat with their agent from email, or set up an AI sidebar in Outlook.
 ---
 
-# Outlook Add-in
+# OpenClaw Outlook Add-in
 
-Office.js sidebar add-in for Outlook Desktop (Classic) and OWA that connects to the local OpenClaw Gateway. Reads email context (subject, sender, body) and provides a chat interface to the full agent — all tools, skills, and automations available directly from the inbox.
+An Office.js sidebar add-in that connects Outlook to your local OpenClaw Gateway via WebSocket. Select any email, and your full agent — with all tools, skills, and automations — is available right in the sidebar.
 
-## Setup
+**Repository:** https://github.com/nachtsheim/openclaw-outlook-addin (MIT)
 
-### Prerequisites
+## What It Does
+
+- Read any email and chat with your OpenClaw agent about it
+- Use all your agent's tools directly from Outlook (calendar, trackers, databases, automations — whatever your agent can do)
+- One-click draft reply, opens Outlook's native compose for review
+- Per-email chat sessions that persist when switching between emails
+- Streaming responses with tool call indicators
+- Light/dark mode auto-detection
+
+## Requirements
+
 - Node.js 18+
-- OpenClaw Gateway running locally (port 18789)
+- OpenClaw Gateway running locally
 - Microsoft 365 account with sideloading enabled
+- Outlook Desktop (Classic, Windows) or Outlook Web (OWA)
 
-### Install & Run
+## Installation
+
+### 1. Clone and install
 
 ```bash
-cd <project-dir>
+git clone https://github.com/nachtsheim/openclaw-outlook-addin.git
+cd openclaw-outlook-addin
 npm install
 npx office-addin-dev-certs install   # first time only
 npm run dev                           # starts https://localhost:3000
 ```
 
-### Sideload
+### 2. Allow the add-in origin in Gateway config
 
-1. Open https://aka.ms/olksideload (OWA)
+```bash
+openclaw config patch '{"gateway":{"controlUi":{"allowedOrigins":["https://localhost:3000"]}}}'
+```
+
+### 3. Sideload into Outlook
+
+1. Open https://aka.ms/olksideload (Outlook Web)
 2. My add-ins → Add a custom add-in → Add from file → upload `manifest.xml`
-3. OWA → Desktop sync can take up to 24h
+3. Sync to Outlook Desktop can take up to 24h
 
-### Gateway Config
+### 4. Connect
 
-Add localhost:3000 to allowed origins:
+Open the sidebar (OpenClaw AI button in ribbon), paste your Gateway token from `~/.openclaw/openclaw.json` → `gateway.auth.token`, click Save & Connect.
 
-```
-gateway.controlUi.allowedOrigins: ["https://localhost:3000"]
-```
+## How It Works
 
-### Token
-
-On first open, paste the Gateway token from `~/.openclaw/openclaw.json` → `gateway.auth.token` into the settings panel (⚙️).
-
-## Architecture
-
-- **Protocol:** WebSocket RPC to Gateway (`/gateway-ws` proxied via webpack-dev-server)
-- **Client-ID:** `openclaw-control-ui` (operator.admin scope)
-- **Sessions:** Per-email sessions via hash of subject+from+date (`agent:main:outlook-{hash}`)
-- **Context:** Email body sent only with first message per email (token-efficient)
-- **Streaming:** `agent.delta`/`chat.delta` events rendered incrementally, multi-segment turns flush between tool calls
+- Connects via WebSocket RPC to the local Gateway (proxied through webpack dev server)
+- Each email gets its own agent session (keyed by subject + sender + date)
+- Email context (subject, sender, body) is sent with the first message per email to save tokens
+- Responses stream in real-time with typing indicators during tool calls
 
 ## Troubleshooting
 
-| Issue | Fix |
-|-------|-----|
-| Redirect to login on sideload | Admin must allow custom add-ins in M365 |
-| "Disconnected" | Check dev server (`npm run dev`) and Gateway status |
-| No streaming, only final message | Verify WSS proxy in webpack.config.js (`/gateway-ws`) |
-| Duplicate responses | Kill stale node processes on port 3000 |
-| Icons missing after update | Remove + re-sideload manifest in OWA |
+- **"Disconnected"** → Check if dev server and Gateway are running
+- **No add-in button in Outlook** → Restart Outlook or wait for OWA→Desktop sync
+- **Can't sideload** → M365 admin must allow custom add-ins
+- **Token prompt every time** → localStorage may be cleared by browser policy
 
-## Key Files
-
-- `manifest.xml` — Office Add-in manifest (sideloading)
-- `src/taskpane/taskpane.js` — Gateway RPC, chat logic, Office.js integration
-- `src/taskpane/taskpane.css` — Light/dark theme styles
-- `webpack.config.js` — Dev server + WSS proxy config
+Full troubleshooting guide in the [README](https://github.com/nachtsheim/openclaw-outlook-addin#troubleshooting).
