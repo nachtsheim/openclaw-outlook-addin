@@ -20,6 +20,8 @@ let currentRunId = null;
 let gatewayToken = null;
 let waitingForResponse = false;
 let historyFetchPending = false;
+let lastDisplayedMsgId = null;
+let contextSentForEmail = null; // track which email subject we already sent context for
 
 // ===== DOM References =====
 const $ = (id) => document.getElementById(id);
@@ -138,6 +140,10 @@ function readEmailContext() {
     item.body.getAsync(Office.CoercionType.Text, (result) => {
       const body = result.status === Office.AsyncResultStatus.Succeeded ? result.value : "";
       emailContext = { subject, from, to, cc, date: dateTime, body };
+      // Reset context tracker when email changes
+      if (contextSentForEmail !== subject) {
+        contextSentForEmail = null;
+      }
       showEmailInfo(subject, from, dateTime);
     });
   } catch (err) {
@@ -425,9 +431,15 @@ function fetchLastAssistantMessage() {
               .map(c => c.text || "")
               .join("\n");
           }
-          if (text.trim()) {
+          const msgId = msg.__openclaw?.id || msg.responseId || msg.timestamp || i;
+          if (text.trim() && msgId !== lastDisplayedMsgId) {
             historyFetchPending = false;
+            lastDisplayedMsgId = msgId;
             addMessage("ai", text.trim());
+          } else if (msgId === lastDisplayedMsgId) {
+            // Same message already shown — retry, new response might not be in history yet
+            historyFetchPending = false;
+            setTimeout(() => fetchLastAssistantMessage(), 2000);
           }
           return;
         }
@@ -464,9 +476,12 @@ function sendChatMessage(message) {
 
   // Build the message with email context
   let fullMessage = message;
-  if (emailContext && !message.startsWith("[Email context already provided]")) {
+  const currentEmailId = emailContext?.subject || null;
+  if (emailContext && contextSentForEmail !== currentEmailId) {
+    // First message for this email — include full context
     const body = (emailContext.body || "").substring(0, 3000);
     fullMessage = `[Current email context]\nSubject: ${emailContext.subject || ""}\nFrom: ${emailContext.from || ""}\nTo: ${emailContext.to || ""}\nDate: ${emailContext.date || ""}\n\nBody:\n${body}\n\n---\n\nUser question: ${message}`;
+    contextSentForEmail = currentEmailId;
   }
 
   rpcRequest("chat.send", {
