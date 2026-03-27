@@ -1,6 +1,6 @@
 # OpenClaw Outlook Add-in
 
-AI-powered Outlook sidebar that reads email context, lets you chat with OpenClaw, and draft/send replies — directly from Outlook.
+Bring the full power of your OpenClaw agent into Outlook — with all your tools, skills, and automations. Read emails, ask questions, create calendar events, query databases, draft replies, or trigger any workflow your agent can do — all from a sidebar without leaving your inbox.
 
 ![Status](https://img.shields.io/badge/status-beta-yellow) ![Platform](https://img.shields.io/badge/platform-Outlook%20Desktop%20%7C%20OWA-blue)
 
