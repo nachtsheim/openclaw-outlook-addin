@@ -1,0 +1,28 @@
+{
+  "name": "openclaw-outlook-addin",
+  "version": "1.0.0",
+  "description": "OpenClaw AI Assistant - Outlook Web Add-in sidebar for email analysis and reply drafting",
+  "main": "src/taskpane/taskpane.js",
+  "scripts": {
+    "dev": "webpack serve --mode development --open",
+    "build": "webpack --mode production",
+    "start": "webpack serve --mode development",
+    "sideload": "npx office-addin-dev-certs install && webpack serve --mode development",
+    "validate": "npx office-addin-manifest validate manifest.xml",
+    "lint": "echo 'No linter configured'"
+  },
+  "dependencies": {
+    "@microsoft/office-js": "^1.1.89"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.3",
+    "office-addin-dev-certs": "^2.0.6",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
+  },
+  "license": "MIT"
+}

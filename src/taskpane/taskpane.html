@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenClaw AI Assistant</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Connection Status -->
+    <div id="connection-bar" class="connection-bar disconnected">
+      <span id="connection-dot" class="dot"></span>
+      <span id="connection-text">Disconnected</span>
+    </div>
+
+    <!-- Email Context Header -->
+    <div id="email-context" class="email-context">
+      <div class="email-context-placeholder" id="email-placeholder">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <span>Select an email to get started</span>
+      </div>
+      <div class="email-context-info" id="email-info" style="display:none">
+        <div class="email-subject" id="email-subject"></div>
+        <div class="email-from" id="email-from"></div>
+        <div class="email-date" id="email-date"></div>
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div id="chat-container" class="chat-container">
+      <div id="chat-messages" class="chat-messages">
+        <div class="message system-message">
+          <div class="message-content">
+            Welcome to OpenClaw AI Assistant. Open an email and ask me anything about it, or click <strong>Draft Reply</strong> to generate a response.
+          </div>
+        </div>
+      </div>
+      <div id="typing-indicator" class="typing-indicator" style="display:none">
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="typing-text">OpenClaw is thinking...</span>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="input-row">
+        <textarea
+          id="message-input"
+          class="message-input"
+          placeholder="Ask about this email..."
+          rows="1"
+        ></textarea>
+        <button id="send-btn" class="btn btn-send" title="Send message">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="action-row">
+        <button id="draft-btn" class="btn btn-action btn-draft">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Draft Reply
+        </button>
+        <button id="send-reply-btn" class="btn btn-action btn-send-reply" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Send Reply
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
