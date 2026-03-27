@@ -11,6 +11,7 @@ let reconnectAttempts = 0;
 let reconnectTimer = null;
 let connected = false;
 let sessionKey = "agent:main:outlook-addin";
+let currentEmailSessionKey = null;
 let lastDraftContent = null;
 let emailContext = null;
 let rpcId = 0;
@@ -140,10 +141,21 @@ function readEmailContext() {
     item.body.getAsync(Office.CoercionType.Text, (result) => {
       const body = result.status === Office.AsyncResultStatus.Succeeded ? result.value : "";
       emailContext = { subject, from, to, cc, date: dateTime, body };
-      // Reset context tracker when email changes
-      if (contextSentForEmail !== subject) {
+
+      // Generate a session key based on the email (stable per mail)
+      const emailHash = simpleHash(subject + "|" + from + "|" + dateTime);
+      const newSessionKey = "agent:main:outlook-" + emailHash;
+
+      if (newSessionKey !== currentEmailSessionKey) {
+        currentEmailSessionKey = newSessionKey;
+        sessionKey = newSessionKey;
         contextSentForEmail = null;
+        lastDisplayedMsgId = null;
+        // Clear chat and load history for this email's session
+        clearChat();
+        if (connected) loadChatHistory();
       }
+
       showEmailInfo(subject, from, dateTime);
     });
   } catch (err) {
@@ -452,6 +464,50 @@ function fetchLastAssistantMessage() {
       historyFetchPending = false;
       addMessage("error", "Failed to fetch response: " + err.message);
     });
+}
+
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function clearChat() {
+  const container = $("chat-messages");
+  // Keep only the welcome message
+  const messages = container.querySelectorAll(".message:not(.system-message)");
+  messages.forEach(m => m.remove());
+}
+
+function loadChatHistory() {
+  rpcRequest("chat.history", { sessionKey: sessionKey, limit: 50 })
+    .then((result) => {
+      if (!result) return;
+      const messages = Array.isArray(result.messages) ? result.messages : [];
+      if (messages.length === 0) return;
+
+      for (const msg of messages) {
+        let text = "";
+        if (typeof msg.content === "string") {
+          text = msg.content;
+        } else if (Array.isArray(msg.content)) {
+          text = msg.content.filter(c => c.type === "text").map(c => c.text || "").join("\n");
+        }
+        if (!text.trim()) continue;
+
+        if (msg.role === "user") {
+          // Strip the email context prefix for display
+          const userMatch = text.match(/User question:\s*([\s\S]*)/);
+          addMessage("user", userMatch ? userMatch[1].trim() : text.trim());
+        } else if (msg.role === "assistant") {
+          addMessage("ai", text.trim());
+          lastDisplayedMsgId = msg.__openclaw?.id || msg.responseId || msg.timestamp || null;
+        }
+      }
+    })
+    .catch(() => {}); // Silently fail — new session has no history
 }
 
 function setConnectionStatus(status) {
