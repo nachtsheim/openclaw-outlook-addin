@@ -11,6 +11,9 @@ AI-powered Outlook sidebar that reads email context, lets you chat with OpenClaw
 - ✏️ **Draft Reply** — One-click reply drafting based on the email context
 - 📤 **Send Reply** — Opens Outlook's native reply compose with the drafted text pre-filled
 - 🌗 **Light/Dark Mode** — Auto-detects Outlook theme (Office.js + prefers-color-scheme)
+- 📌 **Pinned Sidebar** — Stays open when switching between emails (VersionOverrides v1.1)
+- 💾 **Per-Email Chat History** — Each email gets its own session; switching back restores the conversation
+- 📎 **Smart Context** — Email body sent only with the first message per email (saves tokens)
 - 🔄 **Auto-Reconnect** — WebSocket reconnects automatically with exponential backoff
 - 🔒 **Token-based Auth** — Gateway token stored in browser localStorage, never in code
 
@@ -193,6 +196,9 @@ The add-in uses OpenClaw's native Gateway RPC protocol:
 | Icons not showing | Remove add-in in OWA, re-sideload `manifest.xml` |
 | Mixed content errors | The WSS proxy should handle this — check webpack proxy config |
 | Need to debug the sidebar | Open [https://localhost:3000/taskpane.html](https://localhost:3000/taskpane.html) directly in a browser tab |
+| Duplicate responses | Check version tag (top-right of connection bar); kill old node processes on port 3000 |
+| Token prompt on every open | localStorage may be cleared; re-enter token from `~/.openclaw/openclaw.json` |
+| Icons not showing in OWA | Icons are served from GitHub raw URLs; ensure repo is public |
 
 ## Security Notes
 
